@@ -65,7 +65,101 @@ def plot_accuracy(train_acc, valid_acc):
     plt.legend()
 
     plt.tight_layout()
+
+def plot_input_images(data_loader, unnormalizer = None, figsize= (25, 2.5), n_images = 15):
+    fig, axes = plt.subplots(1, n_images, figsize = figsize)
+    for batch_idx, (features, _) in enumerate(data_loader):
+        orig_images = features[:n_images] 
+        color_channels = features.shape[1]
+        image_height = features.shape[2]
+        image_width = features.shape[3]
+        break
     
+    for i in range(n_images):
+        for ax, img in zip(axes, orig_images):
+            curr_img = img.detach().to(torch.device('cpu'))        
+            if unnormalizer is not None:
+                curr_img = unnormalizer(curr_img)
+
+            if color_channels > 1:
+                curr_img = np.transpose(curr_img, (1, 2, 0))
+                ax.imshow(curr_img)
+            else:
+                ax.imshow(curr_img.view((image_height, image_width)), cmap='binary')
+    
+        
+def plot_input_images_with_vae(data_loader, vae_model, device, unnormalizer=None, figsize=(25, 5), n_images=15, noise_std=0.05):
+    """
+    Plots original images and their VAE reconstructions side by side.
+
+    Parameters:
+    - data_loader: DataLoader containing the images to plot.
+    - vae_model: The trained VAE model for reconstructing images.
+    - unnormalizer: Function to unnormalize images (optional).
+    - figsize: Tuple specifying the size of the plot.
+    - n_images: Number of images to display.
+    - noise_std: Standard deviation of the Gaussian noise to add to images.
+    """
+    fig, axes = plt.subplots(2, n_images, figsize=figsize)
+
+    # Ensure axes are iterable even for single rows
+    if n_images == 1:
+        axes = [axes]
+
+    # Extract a batch of images
+    for batch_idx, (features, _) in enumerate(data_loader):
+        orig_images = features[:n_images]
+        color_channels = features.shape[1]
+        image_height = features.shape[2]
+        image_width = features.shape[3]
+        break
+
+    # Process each image
+    for i, (ax_orig, ax_vae, img) in enumerate(zip(axes[0], axes[1], orig_images)):
+        # Prepare the original image
+        curr_img = img.detach().to(device)
+
+        # Add Gaussian noise
+        noise = torch.randn_like(curr_img) * noise_std
+        noisy_img = curr_img + noise
+        noisy_img = torch.clamp(noisy_img, 0, 1)
+
+        # Pass the image through the VAE
+        with torch.no_grad():
+            _, _, _, vae_img = vae_model(noisy_img.unsqueeze(0))  # Add batch dimension
+            vae_img = vae_img.squeeze(0).to(torch.device('cpu'))
+
+        noisy_img = noisy_img.detach().to(torch.device('cpu'))
+        # Unnormalize if needed
+        if unnormalizer is not None:
+            noisy_img = unnormalizer(noisy_img)
+            vae_img = unnormalizer(vae_img)
+
+        # Handle color channels for original image
+        if color_channels > 1:
+            noisy_img = np.transpose(noisy_img.numpy(), (1, 2, 0))
+            ax_orig.imshow(noisy_img)
+        else:
+            ax_orig.imshow(noisy_img.view((image_height, image_width)).numpy(), cmap='binary')
+
+        # Handle color channels for VAE image
+        if color_channels > 1:
+            vae_img = np.transpose(vae_img.numpy(), (1, 2, 0))
+            ax_vae.imshow(vae_img)
+        else:
+            ax_vae.imshow(vae_img.view((image_height, image_width)).numpy(), cmap='binary')
+
+        # Turn off axes for clean visualization
+        ax_orig.axis('off')
+        ax_vae.axis('off')
+
+    # Add titles
+    for ax in axes[0]:
+        ax.set_title("Original + Noise")
+    for ax in axes[1]:
+        ax.set_title("Reconstruction")
+
+    plt.tight_layout()
     
 def plot_generated_images(data_loader, model, device, 
                           unnormalizer=None,
@@ -169,44 +263,6 @@ def plot_images_sampled_from_vae(model, device, latent_size, unnormalizer=None, 
                 ax.imshow(curr_img.view((image_height, image_width)), cmap='binary') 
                 
                 
-def plot_modified_faces(original, diff,
-                        diff_coefficients=(0., 0.5, 1., 1.5, 2., 2.5, 3.),
-                        decoding_fn=None,
-                        device=None,
-                        figsize=(8, 2.5)):
-
-    fig, axes = plt.subplots(nrows=2, ncols=len(diff_coefficients), 
-                             sharex=True, sharey=True, figsize=figsize)
-    
-
-    for i, alpha in enumerate(diff_coefficients):
-        more = original + alpha*diff
-        less = original - alpha*diff
-        
-        
-        if decoding_fn is not None:
-            ######################################
-            ### Latent -> Original space
-            with torch.no_grad():
-
-                if device is not None:
-                    more = more.to(device).unsqueeze(0)
-                    less = less.to(device).unsqueeze(0)
-
-                more = decoding_fn(more).to('cpu').squeeze(0)
-                less = decoding_fn(less).to('cpu').squeeze(0)
-            ###################################### 
-        
-        if not alpha:
-            s = 'original'
-        else:
-            s = f'$\\alpha=${alpha}'
-            
-        axes[0][i].set_title(s)
-        axes[0][i].imshow(more.permute(1, 2, 0))
-        axes[1][i].imshow(less.permute(1, 2, 0))
-        axes[1][i].axison = False
-        axes[0][i].axison = False
         
 
 

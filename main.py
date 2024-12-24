@@ -27,8 +27,8 @@ if __name__ == "__main__":
     LEARNING_RATE = 0.0005
     BATCH_SIZE = 256
     NUM_EPOCHS = 50
-    
-    set_deterministic
+
+    # set_deterministic()
     set_all_seeds(RANDOM_SEED)
     
     ##########################
@@ -85,11 +85,11 @@ if __name__ == "__main__":
     
     plot_generated_images(data_loader=train_loader, model=model, device=DEVICE, modeltype='VAE')           
 
-    plot_latent_space_with_labels(
-    num_classes=10,
-    data_loader=train_loader,
-    encoding_fn=model.encoding_function, 
-    device=DEVICE)
+    # plot_latent_space_with_labels(
+    # num_classes=10,
+    # data_loader=train_loader,
+    # encoding_fn=model.encoding_function, 
+    # device=DEVICE)
 
     plt.legend()
     plt.show()

@@ -31,6 +31,8 @@ class VAE(nn.Module):
     def __init__(self):
         super().__init__()
         
+        latent_dim = 5
+        
         # Input: Shape(batch_size, latent_dim, [28 x 28])
         self.encoder = nn.Sequential(
             nn.Conv2d(1, 32, stride = (1, 1), kernel_size = (3, 3), padding = 1),
@@ -44,12 +46,12 @@ class VAE(nn.Module):
         )
         
         # 3136 = 64 * 7 * 7
-        self.z_mean = torch.nn.Linear(in_features = 3136, out_features = 2)
-        self.z_log_var = torch.nn.Linear(in_features= 3136, out_features= 2)
+        self.z_mean = torch.nn.Linear(in_features = 3136, out_features = latent_dim)
+        self.z_log_var = torch.nn.Linear(in_features= 3136, out_features= latent_dim)
         
         self.decoder = nn.Sequential(
             # 2: Latent dimension
-            nn.Linear(2, 3136),
+            nn.Linear(latent_dim, 3136),
             # -1: Auto correct batch size
             Reshape(-1, 64, 7, 7),
             nn.ConvTranspose2d(64, 64, stride = (1, 1), kernel_size = (3, 3), padding=1),
